@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NotebookLM YT Video Generator</title>
+<link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#050506">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NLM YT Gen">
+<style>
+:root{--bg:#050506;--line:#3a3a41;--tx:#e9e9ee;--mut:#8d8d96;--s1:#f4f4f7;--s2:#a3a3ad;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
+body{margin:0;min-height:100vh;color:var(--tx);font-family:"Helvetica Neue",Arial,system-ui,sans-serif;background:radial-gradient(900px 420px at 50% -8%,rgba(255,255,255,.08),transparent 65%),var(--bg)}
+main{max-width:560px;margin:0 auto;padding:22px 16px 96px}
+.lang{display:flex;gap:10px;margin-bottom:18px}
+.lang button{flex:1;padding:15px;border-radius:14px;border:1px solid var(--line);background:#0c0c0e;color:var(--tx);font:inherit;font-size:17px;font-weight:600;cursor:pointer}
+.lang button.on{background:linear-gradient(180deg,var(--s1),var(--s2));color:#000;border-color:transparent}
+.f{border:1px solid var(--line);background:rgba(18,18,21,.7);border-radius:16px;padding:12px 14px;margin-bottom:12px}
+label{display:block;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--s2);margin-bottom:8px}
+input[type=file],input[type=number]{width:100%;padding:10px;border-radius:12px;border:1px solid var(--line);background:#000;color:var(--tx);font:inherit;font-size:14px}
+input:focus{outline:1px solid var(--s2)}
+input[type=file]::file-selector-button{background:linear-gradient(180deg,var(--s1),var(--s2));color:#000;border:0;padding:7px 13px;border-radius:9px;margin-right:10px;font:inherit;font-weight:600}
+.note{display:block;font-size:13px;color:var(--s1);margin-top:6px;min-height:0;word-break:break-all}
+.note:empty{display:none}
+.num{margin-top:10px}
+#go{display:block;width:calc(100% - 64px);margin:8px auto 0 0;padding:17px;border:0;border-radius:16px;font:inherit;font-size:18px;font-weight:700;color:#000;cursor:pointer;background:linear-gradient(180deg,var(--s1),var(--s2));box-shadow:0 8px 28px rgba(255,255,255,.1)}
+#go:disabled{opacity:.5;cursor:wait}
+#out{margin-top:18px;border:1px solid var(--line);border-radius:16px;padding:12px;background:rgba(18,18,21,.7)}
+canvas,#res{display:block;width:100%;max-height:66vh;object-fit:contain;background:#000;border-radius:12px}
+.bar{height:8px;border-radius:5px;background:#222226;overflow:hidden;margin:12px 0 6px}
+#pb{height:100%;width:0;background:linear-gradient(90deg,var(--s2),var(--s1));transition:width .2s}
+#st{font-size:14px;color:var(--s2)}
+#dl{display:block;width:100%;border:0;cursor:pointer;font:inherit;font-size:16px;margin-top:12px;padding:14px;border-radius:14px;background:linear-gradient(180deg,var(--s1),var(--s2));color:#000;font-weight:700;word-break:break-all}
+#gear{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);right:14px;z-index:5;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:#0c0c0e;color:var(--s1);font-size:20px;line-height:1;cursor:pointer}
+#panel{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 68px);right:14px;z-index:5;width:min(300px,calc(100vw - 24px));border:1px solid var(--line);border-radius:16px;background:#0c0c0e;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.7)}
+#panel[hidden]{display:none}
+#panel label{margin-bottom:4px}
+.row{display:flex;gap:8px;margin-top:10px}
+.row button{flex:1;padding:10px;border-radius:11px;border:0;font:inherit;font-weight:700;color:#000;cursor:pointer;background:linear-gradient(180deg,var(--s1),var(--s2))}
+</style>
+</head>
+<body>
+<button id="gear" aria-label="Settings">&#9881;</button>
+<div id="panel" hidden><label>Save location</label><span class="note" id="dirn"></span>
+<div class="row"><button id="pick">Choose folder</button><button id="reset">Default</button></div><span class="note" id="ver" style="margin-top:10px">v3</span></div>
+<main>
+<div class="lang"><button data-l="en" class="on">English</button><button data-l="hi">Hindi</button></div>
+
+<div class="f"><label>Main video</label><input type="file" id="vf" accept="video/*"><span class="note" id="n_vf"></span>
+<div class="num"><label>Remove from end (sec)</label><input type="number" id="trim" min="0" step="0.1" value="0"></div></div>
+
+<div class="f"><label>Starting frame</label><input type="file" id="sf" accept="image/*"><span class="note" id="n_sf"></span></div>
+
+<div class="f"><label>Starting music</label><input type="file" id="sm" accept="audio/*"><span class="note" id="n_sm"></span>
+<div class="num"><label>Length (sec)</label><input type="number" id="sd" min="1" step="0.1" value="5"></div></div>
+
+<div class="f"><label>Ending frame</label><input type="file" id="ef" accept="image/*"><span class="note" id="n_ef"></span>
+<div class="num"><label>Length (sec)</label><input type="number" id="ed" min="1" step="0.1" value="5"></div></div>
+
+<div class="f"><label>Support page · English</label><input type="file" id="pen" accept="image/*"><span class="note" id="n_pen"></span></div>
+<div class="f"><label>Support page · Hindi</label><input type="file" id="phi" accept="image/*"><span class="note" id="n_phi"></span></div>
+
+<div class="f"><label>Final audio · 10 sec</label><input type="file" id="ea" accept="audio/*"><span class="note" id="n_ea"></span></div>
+
+<button id="go">Create video</button>
+
+<section id="out" hidden>
+<canvas id="cv"></canvas>
+<div class="bar"><div id="pb"></div></div>
+<div id="st"></div>
+<div id="result" hidden><video id="res" controls playsinline></video><button id="dl">Save video</button></div>
+</section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const KEYS=['sf','sm','ef','ea','pen','phi'];
+const saved={};
+let lang='en';
+
+// ---- persistent defaults (IndexedDB, per browser) ----
+const DB=new Promise(res=>{try{const r=indexedDB.open('vstudio',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null)}catch(e){res(null)}});
+async function kvSet(k,v){try{const db=await DB;if(!db)return;await new Promise(r=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=r;t.onerror=r})}catch(e){}}
+async function kvGet(k){try{const db=await DB;if(!db)return;return await new Promise(r=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r()})}catch(e){}}
+const getF=k=>$(k).files[0]||saved[k];
+const note=k=>{const f=getF(k);$('n_'+k).textContent=f?'✓ '+f.name:''};
+const saveCfg=()=>kvSet('cfg',{lang,sd:$('sd').value,ed:$('ed').value});
+
+function setLang(l){lang=l;document.querySelectorAll('.lang button').forEach(b=>b.classList.toggle('on',b.dataset.l===l));saveCfg()}
+document.querySelectorAll('.lang button').forEach(b=>b.onclick=()=>setLang(b.dataset.l));
+$('sd').onchange=saveCfg;$('ed').onchange=saveCfg;
+
+KEYS.forEach(k=>{$(k).onchange=()=>{const f=$(k).files[0];if(!f)return;saved[k]=f;kvSet(k,f);note(k);
+  if(k==='sm'){const a=new Audio(URL.createObjectURL(f));a.onloadedmetadata=()=>{if(isFinite(a.duration)){$('sd').value=Math.round(a.duration*10)/10;saveCfg()}}}}});
+
+$('vf').onchange=()=>{const f=$('vf').files[0];if(!f)return;const v=document.createElement('video');v.preload='metadata';v.src=URL.createObjectURL(f);
+  v.onloadedmetadata=()=>{const d=v.duration;$('n_vf').textContent=`✓ ${f.name} · ${Math.floor(d/60)}:${String(Math.floor(d%60)).padStart(2,'0')} · ${v.videoWidth}×${v.videoHeight}`}};
+
+(async()=>{
+  for(const k of KEYS){const f=await kvGet(k);if(f){saved[k]=f;note(k)}}
+  const c=await kvGet('cfg');if(c){if(c.sd)$('sd').value=c.sd;if(c.ed)$('ed').value=c.ed;if(c.lang)setLang(c.lang)}
+})();
+
+// ---- helpers ----
+const loadImg=f=>new Promise(r=>{if(!f)return r(null);const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=URL.createObjectURL(f)});
+function runFor(ms,draw,prog){return new Promise(res=>{const t=performance.now();(function loop(){const e=performance.now()-t;draw();prog&&prog(Math.min(e,ms)/1000);if(e>=ms)return res();requestAnimationFrame(loop)})()})}
+
+async function go(){
+  const st=$('st'),pb=$('pb');
+  $('out').hidden=false;$('result').hidden=true;
+  const vfile=$('vf').files[0];
+  if(!vfile){st.textContent='Choose the main video.';return}
+  const pfile=getF(lang==='en'?'pen':'phi');
+  if(!pfile){st.textContent='Upload the '+(lang==='en'?'English':'Hindi')+' support page.';return}
+  if(!window.MediaRecorder){st.textContent='Please use Chrome.';return}
+  $('go').disabled=true;
+  let wl=null;
+  try{
+    try{wl=await navigator.wakeLock.request('screen')}catch(e){}
+    st.textContent='Preparing… keep this tab open';
+    const [sImg,eImg,pImg]=await Promise.all([loadImg(getF('sf')),loadImg(getF('ef')),loadImg(pfile)]);
+    const v=document.createElement('video');
+    v.src=URL.createObjectURL(vfile);v.playsInline=true;v.preload='auto';
+    v.muted=false;
+    await new Promise((r,j)=>{const t=setTimeout(()=>j(new Error('Video took too long to load. Try a smaller file.')),90000);v.onloadeddata=()=>{clearTimeout(t);r()};v.onerror=()=>{clearTimeout(t);const c=v.error&&v.error.code;j(new Error('Video could not be opened'+(c===4?' (format/codec not supported here - convert to H.264 MP4)':c===3?' (decode error)':'')))};v.load()});
+    if(!isFinite(v.duration)||v.duration<=0)throw new Error('Could not read the video length');
+    const W=v.videoWidth&~1,H=v.videoHeight&~1;
+    const cv=$('cv');cv.width=W;cv.height=H;const ctx=cv.getContext('2d');
+    const sd=+$('sd').value||5,ed=+$('ed').value||5,pd=5,trim=Math.max(0,+$('trim').value||0);
+    const endAt=Math.max(.2,v.duration-trim);
+    const total=(sImg?sd:0)+endAt+(eImg?ed:0)+pd;
+    let base=0;const setP=x=>{pb.style.width=Math.min(100,(base+x)/total*100)+'%'};
+
+    const ac=new (window.AudioContext||window.webkitAudioContext)();await ac.resume();
+    const dest=ac.createMediaStreamDestination();
+    ac.createMediaElementSource(v).connect(dest);
+    const dec=async f=>f?await ac.decodeAudioData(await f.arrayBuffer()):null;
+    const [sBuf,eBuf]=await Promise.all([dec(getF('sm')),dec(getF('ea'))]);
+    const playBuf=(buf,dur)=>{if(!buf)return;const s=ac.createBufferSource();s.buffer=buf;s.connect(dest);s.start(0,0,Math.min(dur,buf.duration))};
+
+    const mimes=['video/mp4;codecs=avc1.640028,mp4a.40.2','video/mp4;codecs=avc1,mp4a.40.2','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+    const mime=mimes.find(m=>MediaRecorder.isTypeSupported(m))||'';
+    const stream=cv.captureStream(30);
+    dest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
+    const bps=Math.round(Math.min(40e6,Math.max(8e6,W*H*30*.25)));
+    const rec=new MediaRecorder(stream,{mimeType:mime||undefined,videoBitsPerSecond:bps,audioBitsPerSecond:192000});
+    const chunks=[];rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+    const stopped=new Promise(r=>rec.onstop=r);
+
+    const fit=img=>{const ar=img.width/img.height,c=W/H;const s=Math.abs(ar-c)/c<.08?Math.max(W/img.width,H/img.height):Math.min(W/img.width,H/img.height);const w=img.width*s,h=img.height*s;ctx.drawImage(img,(W-w)/2,(H-h)/2,w,h)};
+    const still=(img,dur,label,buf)=>{st.textContent=label;playBuf(buf,dur);return runFor(dur*1000,()=>{ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);fit(img)},setP).then(()=>{base+=dur})};
+
+    rec.start(1000);
+    if(sImg)await still(sImg,sd,'Starting frame…',sBuf);
+
+    st.textContent='Main video…';
+    if(v.currentTime>0){v.currentTime=0;await new Promise(r=>v.onseeked=r)}
+    const fmt=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
+    await v.play();
+    let lastT=-1,lastMove=performance.now(),finished=false,usedMain=0;
+    await new Promise((res,rej)=>{
+      const tick=()=>{
+        if(finished)return;
+        if(v.error){finished=true;return rej(new Error('Video playback failed at '+fmt(v.currentTime)))}
+        const t=v.currentTime;
+        ctx.drawImage(v,0,0,W,H);setP(t);
+        st.textContent='Main video… '+fmt(t)+' / '+fmt(endAt);
+        if(t>=endAt-.03||v.ended){finished=true;usedMain=t;v.pause();return res()}
+        if(t!==lastT){lastT=t;lastMove=performance.now()}
+        else if(performance.now()-lastMove>4000){lastMove=performance.now();v.play().catch(()=>{})}
+      };
+      const loop=()=>{if(finished)return;tick();requestAnimationFrame(loop)};
+      loop();
+      const iv=setInterval(()=>{if(finished)clearInterval(iv);else tick()},300);
+    });
+    base+=endAt;
+
+    playBuf(eBuf,(eImg?ed:0)+pd);
+    if(eImg)await still(eImg,ed,'Ending frame…',null);
+    await still(pImg,pd,'Support page…',null);
+    await new Promise(r=>setTimeout(r,400));
+    rec.stop();await stopped;ac.close();
+
+    const blob=new Blob(chunks,{type:mime||'video/webm'});
+    const url=URL.createObjectURL(blob),ext=mime.includes('mp4')?'mp4':'webm';
+    $('res').src=url;lastBlob=blob;lastName=vfile.name.replace(/\.[^.]+$/,'')+'.'+ext;$('dl').textContent='Save · '+lastName;
+    $('result').hidden=false;pb.style.width='100%';
+    let od=0;
+    try{const t=document.createElement('video');t.preload='metadata';t.src=url;await new Promise(r=>{t.onloadedmetadata=r;t.onerror=r;setTimeout(r,4000)});od=isFinite(t.duration)?t.duration:0}catch(e){}
+    const expected=(sImg?sd:0)+usedMain+(eImg?ed:0)+pd;
+    st.textContent=`Done · video ${fmt(usedMain)} of ${fmt(v.duration)} (trim ${trim}s) · output ${od?fmt(od):'?'} / expected ${fmt(expected)} · ${W}×${H} · ${(blob.size/1048576).toFixed(1)} MB · .${ext}`;
+    $('result').scrollIntoView({behavior:'smooth'});
+  }catch(e){st.textContent='Error: '+(e.message||e)}
+  try{wl&&wl.release()}catch(e){}
+  $('go').disabled=false;
+}
+let lastBlob=null,lastName='video.mp4',dirH=null;
+const dirNote=()=>{$('dirn').textContent=dirH?'Folder: '+dirH.name:'Device default'};
+dirNote();
+(async()=>{const h=await kvGet('dir');if(h){dirH=h;dirNote()}})();
+$('gear').onclick=()=>{$('panel').hidden=!$('panel').hidden};
+$('pick').onclick=async()=>{try{if(!window.showDirectoryPicker)throw new Error('na');const h=await showDirectoryPicker({mode:'readwrite'});dirH=h;kvSet('dir',h);dirNote()}catch(e){if(e&&e.name==='AbortError')return;dirH=null;$('dirn').textContent='Not available here · device default'}};
+$('reset').onclick=()=>{dirH=null;kvSet('dir',null);dirNote()};
+$('dl').onclick=async()=>{
+  if(!lastBlob)return;const st=$('st');
+  try{
+    if(dirH){
+      try{
+        if((await dirH.queryPermission({mode:'readwrite'}))!=='granted'&&(await dirH.requestPermission({mode:'readwrite'}))!=='granted')throw 0;
+        const fh=await dirH.getFileHandle(lastName,{create:true});const w=await fh.createWritable();await w.write(lastBlob);await w.close();
+        st.textContent='\u2713 Saved in '+dirH.name+' \u00b7 '+lastName;return;
+      }catch(e){}
+    }
+    let d=null;try{d=window.claude&&await window.claude.use('downloads')}catch(e){}
+    if(d){await d.save({filename:lastName,data:lastBlob});st.textContent='\u2713 Saved \u00b7 '+lastName;return}
+    const a=document.createElement('a');a.href=URL.createObjectURL(lastBlob);a.download=lastName;document.body.appendChild(a);a.click();a.remove();
+  }catch(e){if(!e||e.code!=='declined')st.textContent='Could not save'}
+};
+$('go').onclick=go;
+</script>
+</body>
+</html>
